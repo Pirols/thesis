@@ -140,3 +140,6 @@ dmypy.json
 
 # Pipenv
 .envrc
+
+# big files' directories
+datasets
