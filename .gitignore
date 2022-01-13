@@ -107,6 +107,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.envrc
 env/
 venv/
 ENV/
@@ -138,8 +139,5 @@ dmypy.json
 # profiling data
 .prof
 
-# Pipenv
-.envrc
-
-# big files' directories
+# datasets
 datasets
