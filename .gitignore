@@ -139,5 +139,7 @@ dmypy.json
 # profiling data
 .prof
 
-# datasets
+# folders not version controlled
 datasets
+report
+papers
