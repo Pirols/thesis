@@ -145,7 +145,6 @@ report
 papers
 
 # Pipenv files
-Pipfile
 Pipfile.lock
 
 # Pre-commit setup
