@@ -144,5 +144,9 @@ datasets
 report
 papers
 
+# Pipenv files
 Pipfile
 Pipfile.lock
+
+# Pre-commit setup
+.pre-commit-config.yaml
