@@ -61,8 +61,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--datasets_id", action="append")
     parser.add_argument("--infinite_dataset", action="store_true", default=False)
     parser.add_argument("--iterable_dataset", action="store_true", default=False)
+    parser.add_argument("--overfit_batches", type=float, default=0.0)
 
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--deterministic", store_true, default=False)
 
     return parser.parse_args()
 
@@ -151,7 +153,7 @@ def train(args: argparse.Namespace) -> None:
     # TRAINER
     trainer = Trainer(
         gpus=args.gpus,
-        # overfit_batches=10,
+        overfit_batches=args.overfit_batches,
         accumulate_grad_batches=args.gradient_acc_steps,
         gradient_clip_val=args.gradient_clipping,
         logger=wandb_logger,
@@ -161,7 +163,7 @@ def train(args: argparse.Namespace) -> None:
         max_steps=args.num_training_steps,
         precision=args.precision,
         # amp_level=args.amp_level,
-        deterministic=True,
+        deterministic=args.deterministic,
     )
 
     # FIT
