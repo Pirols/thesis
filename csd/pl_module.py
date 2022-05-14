@@ -95,8 +95,6 @@ class CSDModule(pl.LightningModule):
 
         for outputs in validation_step_outputs:
 
-            outputs = outputs[0]
-
             correct_start_predictions = torch.eq(
                 outputs["start_predictions"],
                 outputs["start_positions"],
