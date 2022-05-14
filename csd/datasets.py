@@ -1,6 +1,8 @@
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from typing import Dict
+from typing import List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -144,7 +146,7 @@ class RainbowExtractiveQADataset(Dataset):
                 },
             )
 
-    def __getitem__(self, idx: int) -> dict[str, Any]:
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
         return self.data_store[idx]
 
     def __len__(self) -> int:
@@ -178,7 +180,7 @@ class RainbowExtractiveQAIterableDataset(IterableDataset):
             / (("validation" if is_test else "train") + "." + self.dataset_id + ".csv")
         )
 
-    def __iter__(self) -> Iterator[dict[str, Any]]:
+    def __iter__(self) -> Iterator[Dict[str, Any]]:
         # aggregation variable
         current_batch_input_ids = []
         current_batch_attention_masks = []
@@ -276,7 +278,7 @@ class RainbowExtractiveQAIterableDataset(IterableDataset):
 
 
 class DatasetAlternator(IterableDataset):
-    def __init__(self, datasets: list[IterableDataset], is_infinite: bool = False):
+    def __init__(self, datasets: List[IterableDataset], is_infinite: bool = False):
         self.datasets = {dataset.dataset_id: dataset for dataset in datasets}
         self.is_infinite = is_infinite
 

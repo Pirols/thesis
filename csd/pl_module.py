@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from typing import Dict
 
 import pytorch_lightning as pl
 import torch
@@ -19,13 +20,13 @@ class CSDModule(pl.LightningModule):
 
     def forward(
         self,
-        input_ids,
-        attention_mask,
+        input_ids: torch.LongTensor,
+        attention_mask: torch.LongTensor,
         start_positions=None,
         end_positions=None,
         *args,
         **kwargs,
-    ) -> dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
 
         # with open("data/batches.txt", "a", encoding='utf-8') as fdesc:
         #     fdesc.write(f"{str(input_ids.shape)}\n")
@@ -53,7 +54,7 @@ class CSDModule(pl.LightningModule):
 
         return output_dict
 
-    def training_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> float:
+    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> float:
         forward_output = self.forward(**batch)
         loss = forward_output["loss"]
         self.log(
@@ -67,8 +68,8 @@ class CSDModule(pl.LightningModule):
         return loss
 
     def validation_step(
-        self, batch: dict[str, torch.Tensor], batch_idx: int, *args, **kwargs
-    ) -> dict[str, Any]:
+        self, batch: Dict[str, torch.Tensor], batch_idx: int, *args, **kwargs
+    ) -> Dict[str, Any]:
 
         forward_output = self.forward(**batch)
         loss = forward_output["loss"]
@@ -85,7 +86,7 @@ class CSDModule(pl.LightningModule):
             "end_positions": batch["end_positions"],
         }
 
-    def validation_epoch_end(self, validation_step_outputs: dict) -> dict:
+    def validation_epoch_end(self, validation_step_outputs: dict) -> Dict[str, Any]:
 
         if not isinstance(validation_step_outputs, list):
             validation_step_outputs = [validation_step_outputs]

@@ -1,5 +1,7 @@
 import os
 from collections import defaultdict
+from typing import Dict
+from typing import List
 from typing import Union
 
 import torch
@@ -14,7 +16,7 @@ class ExtractiveQATokenizer:
         self,
         transformer_model: str,
         use_special_tokens: bool,
-        dataset_ids: list[str],
+        dataset_ids: List[str],
     ) -> None:
 
         self.transformer_model = transformer_model
@@ -68,7 +70,7 @@ class ExtractiveQATokenizer:
         os.makedirs(dir_path, exist_ok=True)
         self.tokenizer.save_pretrained(dir_path)
 
-    def decode(self, sequence: Union[int, list[int]]) -> str:
+    def decode(self, sequence: Union[int, List[int]]) -> str:
         if isinstance(sequence, int):
             sequence = [sequence]
         return self.tokenizer.decode(sequence)
@@ -76,13 +78,13 @@ class ExtractiveQATokenizer:
     def __len__(self) -> int:
         return len(self.tokenizer)
 
-    def __call__(self, sentences: Union[list[str], str]) -> dict[str, torch.LongTensor]:
+    def __call__(self, sentences: Union[List[str], str]) -> Dict[str, torch.LongTensor]:
         return self.tokenizer(sentences, return_tensors="pt")
 
 
 def get_tokenizer(
     transformer_model: str,
     use_special_tokens: bool,
-    datasets: list[str],
+    datasets: List[str],
 ) -> ExtractiveQATokenizer:
     return ExtractiveQATokenizer(transformer_model, use_special_tokens, datasets)
