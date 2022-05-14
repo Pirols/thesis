@@ -1,9 +1,9 @@
-from collections.abc import Iterable
 from pathlib import Path
+from typing import Iterator
 from typing import Tuple
 
 
-def rainbow_file_iter(fname: Path, end_token: str) -> Iterable[Tuple[str, int]]:
+def rainbow_file_iter(fname: Path, end_token: str) -> Iterator[Tuple[str, int]]:
     """Iterates over the samples contained in fname rainbow formatted file."""
     with open(fname, encoding="UTF-8") as fdesc:
         # discard first line

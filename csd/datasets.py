@@ -1,7 +1,7 @@
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 
 import torch
