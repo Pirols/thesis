@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--overfit_batches", type=float, default=0.0)
 
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--deterministic", store_true, default=False)
+    parser.add_argument("--deterministic", action="store_true", default=False)
 
     return parser.parse_args()
 
