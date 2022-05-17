@@ -28,9 +28,6 @@ class Module(pl.LightningModule):
         **kwargs,
     ) -> Dict[str, torch.Tensor]:
 
-        # with open("data/batches.txt", "a", encoding='utf-8') as fdesc:
-        #     fdesc.write(f"{str(input_ids.shape)}\n")
-
         outputs = self.qa_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -79,9 +76,16 @@ class Module(pl.LightningModule):
         self.log(
             f"{dataset_identifier}_val_loss",
             loss,
+            logger=True,
             batch_size=batch["input_ids"].size(0),
         )
-        self.log(f"val_loss", loss, batch_size=batch["input_ids"].size(0))
+        self.log(
+            "val_loss",
+            loss,
+            logger=True,
+            prog_bar=True,
+            batch_size=batch["input_ids"].size(0),
+        )
 
         return {
             f'{batch["dataset_identifier"]}_val_loss': loss,
@@ -140,32 +144,38 @@ class Module(pl.LightningModule):
             self.log(
                 f"{prefix}_correct_start_predictions",
                 torch.sum(correct_start_predictions) / predictions_len,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_correct_end_predictions",
                 torch.sum(correct_end_predictions) / predictions_len,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_correct_predictions",
                 correct_predictions,
+                logger=True,
+                batch_size=(outputs["start_predictions"].size(0)),
             )
-            batch_size = (outputs["start_predictions"].size(0),)
 
             self.log(
                 f"{prefix}_in_bound_start_predictions",
                 torch.sum(in_bound_start_predictions) / predictions_len,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_in_bound_end_predictions",
                 torch.sum(in_bound_end_predictions) / predictions_len,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_in_bound_predictions",
                 torch.sum(in_bound_predictions) / predictions_len,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
 
@@ -173,11 +183,14 @@ class Module(pl.LightningModule):
             self.log(
                 f"{prefix}_val_loss",
                 val_loss,
+                logger=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 "val_loss",
                 val_loss,
+                logger=True,
+                prog_bar=True,
                 batch_size=outputs["start_predictions"].size(0),
             )
 
@@ -238,7 +251,7 @@ class Module(pl.LightningModule):
 def get_module(args, tokenizer) -> Module:
     module = Module(args)
     if args.start_from_ckpt:
-        starting_module = CSDModule.load_from_checkpoint(args.start_from_ckpt)
+        starting_module = Module.load_from_checkpoint(args.start_from_ckpt)
         tmp_path = f'/tmp/{args.start_from_ckpt.split("/")[-1]}'
         torch.save(starting_module.state_dict(), tmp_path)
         module.load_state_dict(torch.load(tmp_path))
