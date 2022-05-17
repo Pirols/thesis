@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
         action="append",
     )
 
-    parser.add_argument("--tpu", type="store_true", default=False)
+    parser.add_argument("--tpu", action="store_true", default=False)
     parser.add_argument("--num_workers", type=int, default=1)
     parser.add_argument("--precision", type=int, default=16)
     parser.add_argument("--amp_level", type=str, default="O1")
