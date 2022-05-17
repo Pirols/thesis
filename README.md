@@ -20,6 +20,20 @@ tar -xf datasets/v1.0.rainbow.tar.gz -C datasets
 rm datasets/v1.0.rainbow.tar.gz
 ```
 
+## Training
+
+In order to train your own model you can execute, for instance, the following:
+
+```bash
+PYTHONPATH=$(pwd) python csd/train.py --data_path datasets --datasets_id socialiqa
+```
+
+To see all available parameters run the following instead:
+
+```bash
+PYTHONPATH=$(pwd) python esc/train.py --help
+```
+
 ## Acknowledgments
 
 This project is inspired by [ESC: Redesigning WSD with Extractive Sense Comprehension](https://aclanthology.org/2021.naacl-main.371/), available [here](https://github.com/SapienzaNLP/esc).

@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
         action="append",
     )
 
-    parser.add_argument("--gpus", type=int, default=-1)
+    parser.add_argument("--tpu", type=store_true, default=False)
     parser.add_argument("--num_workers", type=int, default=1)
     parser.add_argument("--precision", type=int, default=16)
     parser.add_argument("--amp_level", type=str, default="O1")
@@ -152,7 +152,7 @@ def train(args: argparse.Namespace) -> None:
 
     # TRAINER
     trainer = Trainer(
-        gpus=args.gpus,
+        accelerator="tpu" if args.tpu else "gpu",
         overfit_batches=args.overfit_batches,
         accumulate_grad_batches=args.gradient_acc_steps,
         gradient_clip_val=args.gradient_clipping,
