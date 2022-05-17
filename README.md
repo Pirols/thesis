@@ -25,13 +25,13 @@ rm datasets/v1.0.rainbow.tar.gz
 In order to train your own model you can execute, for instance, the following:
 
 ```bash
-PYTHONPATH=$(pwd) python csd/train.py --data_path datasets --datasets_id socialiqa
+PYTHONPATH=$(pwd) python src/train.py --data_path datasets --datasets_id socialiqa
 ```
 
 To see all available parameters run the following instead:
 
 ```bash
-PYTHONPATH=$(pwd) python esc/train.py --help
+PYTHONPATH=$(pwd) python src/train.py --help
 ```
 
 ## Acknowledgments

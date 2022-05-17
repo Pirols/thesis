@@ -9,9 +9,9 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 
-from csd.rainbow import rainbow_file_iter
-from csd.rainbow import ZERO_INDEX_LABEL_MAPPINGS
-from csd.tokenizer import ExtractiveQATokenizer
+from src.rainbow import rainbow_file_iter
+from src.rainbow import ZERO_INDEX_LABEL_MAPPINGS
+from src.tokenizer import ExtractiveQATokenizer
 
 
 class RainbowExtractiveQADataset(Dataset):

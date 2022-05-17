@@ -8,7 +8,7 @@ from transformers import AutoModelForQuestionAnswering
 from transformers import get_linear_schedule_with_warmup
 
 
-class CSDModule(pl.LightningModule):
+class Module(pl.LightningModule):
     def __init__(self, conf, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.save_hyperparameters(vars(conf))  # self.hparams = conf
@@ -235,8 +235,8 @@ class CSDModule(pl.LightningModule):
         return [optimizer], [{"interval": "step", "scheduler": lr_scheduler}]
 
 
-def get_csd_module(args, tokenizer) -> CSDModule:
-    module = CSDModule(args)
+def get_module(args, tokenizer) -> Module:
+    module = Module(args)
     if args.start_from_ckpt:
         starting_module = CSDModule.load_from_checkpoint(args.start_from_ckpt)
         tmp_path = f'/tmp/{args.start_from_ckpt.split("/")[-1]}'

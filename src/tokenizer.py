@@ -7,8 +7,8 @@ from typing import Union
 import torch
 from transformers import AutoTokenizer
 
-from csd.tokens import ALL_TOKENS
-from csd.tokens import OPT_TOKENS
+from src.tokens import ALL_TOKENS
+from src.tokens import OPT_TOKENS
 
 
 class ExtractiveQATokenizer:

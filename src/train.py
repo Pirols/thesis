@@ -10,11 +10,11 @@ from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import ConcatDataset
 from torch.utils.data.dataloader import DataLoader
 
-from csd.datasets import DatasetAlternator
-from csd.datasets import RainbowExtractiveQADataset
-from csd.datasets import RainbowExtractiveQAIterableDataset
-from csd.pl_module import get_csd_module
-from csd.tokenizer import get_tokenizer
+from src.datasets import DatasetAlternator
+from src.datasets import RainbowExtractiveQADataset
+from src.datasets import RainbowExtractiveQAIterableDataset
+from src.pl_module import get_module
+from src.tokenizer import get_tokenizer
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,8 +46,8 @@ def parse_args() -> argparse.Namespace:
         action="append",
     )
 
-    parser.add_argument("--tpu", action="store_true", default=False)
-    parser.add_argument("--gpus", type=int, default=-1)
+    parser.add_argument("--accelerator", type=str, default="gpu")
+    parser.add_argument("--devices", type=int, default=-1)
     parser.add_argument("--num_workers", type=int, default=1)
     parser.add_argument("--precision", type=int, default=16)
     parser.add_argument("--amp_level", type=str, default="O1")
@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=15)
 
     parser.add_argument("--run_name", type=str, default="default_name")
-    parser.add_argument("--wandb_project", type=str, default="csd")
+    parser.add_argument("--wandb_project", type=str, default="thesis")
 
     parser.add_argument("--data_path", type=str, default="data")
     parser.add_argument("--datasets_id", action="append")
@@ -149,12 +149,12 @@ def train(args: argparse.Namespace) -> None:
     progress_bar_cb = TQDMProgressBar(refresh_rate=50)
 
     # WSD MODULE
-    module = get_csd_module(args, tokenizer)
+    module = get_module(args, tokenizer)
 
     # TRAINER
     trainer = Trainer(
-        accelerator="tpu" if args.tpu else "gpu",
-        gpus=args.gpus if not args.tpu else 0,
+        accelerator=args.accelerator,
+        devices=args.devices,
         overfit_batches=args.overfit_batches,
         accumulate_grad_batches=args.gradient_acc_steps,
         gradient_clip_val=args.gradient_clipping,
