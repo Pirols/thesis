@@ -122,7 +122,7 @@ def train(args: argparse.Namespace) -> None:
         shuffle=True,
     )
     validation_dataloader = [
-        DataLoader(vd, batch_size=None, num_workers=args.num_workers, shuffle=True)
+        DataLoader(vd, batch_size=None, num_workers=args.num_workers)
         for vd in validation_datasets
     ]
 
