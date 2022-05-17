@@ -64,6 +64,7 @@ class CSDModule(pl.LightningModule):
             on_epoch=True,
             prog_bar=True,
             logger=True,
+            batch_size=batch["input_ids"].size(0),
         )
         return loss
 
@@ -75,7 +76,12 @@ class CSDModule(pl.LightningModule):
         loss = forward_output["loss"]
 
         dataset_identifier = batch["dataset_identifier"]
-        self.log(f"{dataset_identifier}_val_loss", loss)
+        self.log(
+            f"{dataset_identifier}_val_loss",
+            loss,
+            batch_size=batch["input_ids"].size(0),
+        )
+        self.log(f"val_loss", loss, batch_size=batch["input_ids"].size(0))
 
         return {
             f'{batch["dataset_identifier"]}_val_loss': loss,
@@ -134,28 +140,46 @@ class CSDModule(pl.LightningModule):
             self.log(
                 f"{prefix}_correct_start_predictions",
                 torch.sum(correct_start_predictions) / predictions_len,
+                batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_correct_end_predictions",
                 torch.sum(correct_end_predictions) / predictions_len,
+                batch_size=outputs["start_predictions"].size(0),
             )
-            self.log(f"{prefix}_correct_predictions", correct_predictions)
+            self.log(
+                f"{prefix}_correct_predictions",
+                correct_predictions,
+            )
+            batch_size = (outputs["start_predictions"].size(0),)
 
             self.log(
                 f"{prefix}_in_bound_start_predictions",
                 torch.sum(in_bound_start_predictions) / predictions_len,
+                batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_in_bound_end_predictions",
                 torch.sum(in_bound_end_predictions) / predictions_len,
+                batch_size=outputs["start_predictions"].size(0),
             )
             self.log(
                 f"{prefix}_in_bound_predictions",
                 torch.sum(in_bound_predictions) / predictions_len,
+                batch_size=outputs["start_predictions"].size(0),
             )
 
             val_loss = torch.mean(outputs[f"{prefix}_val_loss"])
-            self.log(f"{prefix}_val_loss", val_loss)
+            self.log(
+                f"{prefix}_val_loss",
+                val_loss,
+                batch_size=outputs["start_predictions"].size(0),
+            )
+            self.log(
+                "val_loss",
+                val_loss,
+                batch_size=outputs["start_predictions"].size(0),
+            )
 
         return final_output
 
