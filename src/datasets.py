@@ -165,14 +165,17 @@ class RainbowExtractiveQAIterableDataset(IterableDataset):
         is_test: bool = False,
     ) -> None:
 
+        # initialize dataset
+        self.data_store = []
+        self.init_dataset()
         self.dataset_id = dataset_id
         self.zero_index_label = ZERO_INDEX_LABEL_MAPPINGS[dataset_id]
         self.is_test = is_test
 
         self.tokenizer = tokenizer
         self.tokens_per_batch = tokens_per_batch
-        self.start_opt_tokens_id = self.tokenizer.start_tokens_id[self.dataset_id]
-        self.end_opt_tokens_id = self.tokenizer.end_tokens_id[self.dataset_id]
+        self.start_opt_tokens_id = self.tokenizer.start_opt_tokens_id[self.dataset_id]
+        self.end_opt_tokens_id = self.tokenizer.end_opt_tokens_id[self.dataset_id]
 
         self.fname = (
             Path(rainbow_path)
