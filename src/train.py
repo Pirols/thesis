@@ -146,6 +146,7 @@ def train(args: argparse.Namespace) -> None:
         dirpath=f"experiments/{args.run_name}",
         filename="{epoch}-{val_loss:.2f}",
         save_top_k=args.save_topk,
+        save_last=True,
         verbose=True,
         mode="min",
         monitor="val_loss",
