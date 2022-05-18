@@ -67,7 +67,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--deterministic", action="store_true", default=False)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.iterable_dataset:
+        args.val_check_interval = int(args.val_check_interval)
+
+    return args
 
 
 def train(args: argparse.Namespace) -> None:
@@ -161,9 +165,7 @@ def train(args: argparse.Namespace) -> None:
         gradient_clip_val=args.gradient_clipping,
         logger=wandb_logger,
         callbacks=[early_stopping_cb, progress_bar_cb, model_checkpoint],
-        val_check_interval=int(args.val_check_interval)
-        if args.iterable_dataset
-        else args.val_check_interval,
+        val_check_interval=args.val_check_interval,
         max_steps=args.num_training_steps,
         precision=args.precision,
         # amp_level=args.amp_level,
