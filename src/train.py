@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start_from_ckpt", type=str)
 
     parser.add_argument("--tokens_per_batch", type=int, default=700)
-    parser.add_argument("--validation_check_interval", type=int, default=2000)
+    parser.add_argument("--val_check_interval", type=float, default=1.0)
     parser.add_argument("--gradient_acc_steps", type=int, default=20)
     parser.add_argument("--gradient_clipping", type=float, default=10.0)
     parser.add_argument("--num_training_steps", type=int, default=300_000)
@@ -140,6 +140,7 @@ def train(args: argparse.Namespace) -> None:
     ## ModelCheckpoint
     model_checkpoint = ModelCheckpoint(
         dirpath=f"experiments/{args.run_name}",
+        filename="{epoch}-{val_loss:.2f}",
         save_top_k=args.save_topk,
         verbose=True,
         mode="min",
@@ -161,7 +162,9 @@ def train(args: argparse.Namespace) -> None:
         logger=wandb_logger,
         callbacks=[early_stopping_cb, progress_bar_cb],
         enable_checkpointing=model_checkpoint,
-        val_check_interval=args.validation_check_interval,
+        val_check_interval=int(args.val_check_interval)
+        if args.iterable_dataset
+        else args.val_check_interval,
         max_steps=args.num_training_steps,
         precision=args.precision,
         # amp_level=args.amp_level,
