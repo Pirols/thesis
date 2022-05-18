@@ -126,7 +126,7 @@ def train(args: argparse.Namespace) -> None:
         train_dataset,
         batch_size=None,
         num_workers=args.num_workers,
-        shuffle=True,
+        shuffle=not args.iterable_dataset,  # if dataset is iterable no shuffling
     )
     validation_dataloader = [
         DataLoader(vd, batch_size=None, num_workers=args.num_workers)
