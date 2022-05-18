@@ -33,7 +33,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val_check_interval", type=float, default=1.0)
     parser.add_argument("--gradient_acc_steps", type=int, default=20)
     parser.add_argument("--gradient_clipping", type=float, default=10.0)
-    parser.add_argument("--num_training_steps", type=int, default=300_000)
     parser.add_argument("--num_warmup_steps", type=int, default=0)
 
     parser.add_argument("--optimizer", type=str, default="radam")
@@ -70,6 +69,9 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.iterable_dataset:
         args.val_check_interval = int(args.val_check_interval)
+
+    if args.overfit_batches > 1.0:
+        args.overfit_batches = int(args.overfit_batches)
 
     return args
 
@@ -167,7 +169,6 @@ def train(args: argparse.Namespace) -> None:
         logger=wandb_logger,
         callbacks=[early_stopping_cb, progress_bar_cb, model_checkpoint],
         val_check_interval=args.val_check_interval,
-        max_steps=args.num_training_steps,
         precision=args.precision,
         # amp_level=args.amp_level,
         deterministic=args.deterministic,
