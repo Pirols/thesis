@@ -165,9 +165,6 @@ class RainbowExtractiveQAIterableDataset(IterableDataset):
         is_test: bool = False,
     ) -> None:
 
-        # initialize dataset
-        self.data_store = []
-        self.init_dataset()
         self.dataset_id = dataset_id
         self.zero_index_label = ZERO_INDEX_LABEL_MAPPINGS[dataset_id]
         self.is_test = is_test
