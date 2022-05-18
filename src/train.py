@@ -160,8 +160,7 @@ def train(args: argparse.Namespace) -> None:
         accumulate_grad_batches=args.gradient_acc_steps,
         gradient_clip_val=args.gradient_clipping,
         logger=wandb_logger,
-        callbacks=[early_stopping_cb, progress_bar_cb],
-        enable_checkpointing=model_checkpoint,
+        callbacks=[early_stopping_cb, progress_bar_cb, model_checkpoint],
         val_check_interval=int(args.val_check_interval)
         if args.iterable_dataset
         else args.val_check_interval,
