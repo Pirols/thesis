@@ -1,11 +1,23 @@
 import os
 from typing import Any
 from typing import Dict
+from typing import List
+from typing import Union
 
 import pytorch_lightning as pl
 import torch
 from transformers import AutoModelForQuestionAnswering
+from transformers import get_cosine_schedule_with_warmup
 from transformers import get_linear_schedule_with_warmup
+
+from src.optimizers.ranger import Ranger
+from src.optimizers.rangerlars import RangerLars
+
+
+STR_TO_SCHEDULER = {
+    "linear": get_linear_schedule_with_warmup,
+    "cosine": get_cosine_schedule_with_warmup,
+}
 
 
 class Module(pl.LightningModule):
@@ -96,7 +108,10 @@ class Module(pl.LightningModule):
             "end_positions": batch["end_positions"],
         }
 
-    def validation_epoch_end(self, validation_step_outputs: dict) -> Dict[str, Any]:
+    def validation_epoch_end(
+        self,
+        validation_step_outputs: Union[Dict[str, Any], List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
 
         if not isinstance(validation_step_outputs, list):
             validation_step_outputs = [validation_step_outputs]
@@ -145,59 +160,56 @@ class Module(pl.LightningModule):
                 f"{prefix}_correct_start_predictions",
                 torch.sum(correct_start_predictions) / predictions_len,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
             self.log(
                 f"{prefix}_correct_end_predictions",
                 torch.sum(correct_end_predictions) / predictions_len,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
             self.log(
                 f"{prefix}_correct_predictions",
                 correct_predictions,
                 logger=True,
-                batch_size=(outputs["start_predictions"].size(0)),
+                batch_size=predictions_len,
             )
-
             self.log(
                 f"{prefix}_in_bound_start_predictions",
                 torch.sum(in_bound_start_predictions) / predictions_len,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
             self.log(
                 f"{prefix}_in_bound_end_predictions",
                 torch.sum(in_bound_end_predictions) / predictions_len,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
             self.log(
                 f"{prefix}_in_bound_predictions",
                 torch.sum(in_bound_predictions) / predictions_len,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
-
             val_loss = torch.mean(outputs[f"{prefix}_val_loss"])
             self.log(
                 f"{prefix}_val_loss",
                 val_loss,
                 logger=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
             self.log(
                 "val_loss",
                 val_loss,
                 logger=True,
                 prog_bar=True,
-                batch_size=outputs["start_predictions"].size(0),
+                batch_size=predictions_len,
             )
 
         return final_output
 
-    def get_optimizer_and_scheduler(self):
-
+    def configure_optimizers(self):
         no_decay = self.hparams.no_decay_params
 
         optimizer_grouped_parameters = [
@@ -222,29 +234,40 @@ class Module(pl.LightningModule):
         if self.hparams.optimizer == "adam":
             optimizer = torch.optim.Adam(
                 optimizer_grouped_parameters,
-                self.hparams.learning_rate,
+                lr=self.hparams.learning_rate,
+            )
+        elif self.hparams.optimizer == "adamw":
+            optimizer = torch.optim.AdamW(
+                optimizer_grouped_parameters,
+                lr=self.hparams.learning_rate,
             )
         elif self.hparams.optimizer == "radam":
             optimizer = torch.optim.RAdam(
                 optimizer_grouped_parameters,
-                self.hparams.learning_rate,
+                lr=self.hparams.learning_rate,
             )
-            return optimizer, None
+            return optimizer
+        elif self.hparams.optimizer == "ranger":
+            optimizer = Ranger(
+                optimizer_grouped_parameters,
+                lr=self.hparams.learning_rate,
+            )
+            return optimizer
+        elif self.hparams.optimizer == "rangerlars":
+            optimizer = RangerLars(
+                optimizer_grouped_parameters,
+                lr=self.hparams.learning_rate,
+            )
+            return optimizer
         else:
             raise NotImplementedError
 
-        lr_scheduler = get_linear_schedule_with_warmup(
+        lr_scheduler = STR_TO_SCHEDULER[self.hparams.scheduler](
             optimizer=optimizer,
             num_warmup_steps=self.hparams.num_warmup_steps,
             num_training_steps=self.hparams.num_training_steps,
         )
 
-        return optimizer, lr_scheduler
-
-    def configure_optimizers(self):
-        optimizer, lr_scheduler = self.get_optimizer_and_scheduler()
-        if lr_scheduler is None:
-            return optimizer
         return [optimizer], [{"interval": "step", "scheduler": lr_scheduler}]
 
 
