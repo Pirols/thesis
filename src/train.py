@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--deterministic", action="store_true", default=False)
 
     args = parser.parse_args()
-    if args.iterable_dataset:
+    if args.iterable_dataset > 1.0:
         args.val_check_interval = int(args.val_check_interval)
 
     if args.overfit_batches > 1.0:
