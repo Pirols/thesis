@@ -71,7 +71,7 @@ class Module(pl.LightningModule):
         self.log(
             "train_loss",
             loss,
-            on_step=True,
+            # on_step=True,
             on_epoch=True,
             prog_bar=True,
             logger=True,
@@ -80,7 +80,10 @@ class Module(pl.LightningModule):
         return loss
 
     def validation_step(
-        self, batch: Dict[str, torch.Tensor], batch_idx: int, *args, **kwargs
+        self,
+        batch: Dict[str, torch.Tensor],
+        batch_idx: int,
+        dataloader_idx: int = 0,
     ) -> Dict[str, Any]:
 
         forward_output = self.forward(**batch)
@@ -91,12 +94,14 @@ class Module(pl.LightningModule):
             f"{dataset_identifier}_val_loss",
             loss,
             logger=True,
+            on_epoch=True,
             batch_size=batch["input_ids"].size(0),
         )
         self.log(
             "val_loss",
             loss,
             logger=True,
+            on_epoch=True,
             prog_bar=True,
             batch_size=batch["input_ids"].size(0),
         )
@@ -118,98 +123,88 @@ class Module(pl.LightningModule):
         if not isinstance(validation_step_outputs, list):
             validation_step_outputs = [validation_step_outputs]
 
-        final_output = validation_step_outputs[-1]
+        total_val_samples = 0
+        correct_start_predictions = 0
+        correct_end_predictions = 0
+        correct_predictions = 0
+        in_bound_start_predictions = 0
+        in_bound_end_predictions = 0
+        in_bound_predictions = 0
 
-        for outputs in validation_step_outputs:
+        for val_batch_out in validation_step_outputs:
 
-            correct_start_predictions = torch.eq(
-                outputs["start_predictions"],
-                outputs["start_positions"],
+            total_val_batch_samples = val_batch_out["start_predictions"].size(0)
+            correct_start_predictions_batch = torch.eq(
+                val_batch_out["start_predictions"],
+                val_batch_out["start_positions"],
             )
-            correct_end_predictions = torch.eq(
-                outputs["end_predictions"],
-                outputs["end_positions"],
+            correct_end_predictions_batch = torch.eq(
+                val_batch_out["end_predictions"],
+                val_batch_out["end_positions"],
             )
-            predictions_len = torch.tensor(
-                correct_start_predictions.size(0),
-                dtype=torch.float,
+            correct_predictions_batch = torch.bitwise_and(
+                correct_start_predictions_batch,
+                correct_end_predictions_batch,
             )
-
-            correct_predictions = torch.bitwise_and(
-                correct_start_predictions,
-                correct_end_predictions,
+            in_bound_start_predictions_batch = torch.bitwise_and(
+                val_batch_out["start_predictions"] >= val_batch_out["start_positions"],
+                val_batch_out["start_predictions"] <= val_batch_out["end_positions"],
             )
-            correct_predictions = torch.sum(correct_predictions) / predictions_len
-
-            in_bound_start_predictions = torch.bitwise_and(
-                outputs["start_predictions"] >= outputs["start_positions"],
-                outputs["start_predictions"] <= outputs["end_positions"],
+            in_bound_end_predictions_batch = torch.bitwise_and(
+                val_batch_out["end_predictions"] >= val_batch_out["start_positions"],
+                val_batch_out["end_predictions"] <= val_batch_out["end_positions"],
             )
-
-            in_bound_end_predictions = torch.bitwise_and(
-                outputs["end_predictions"] >= outputs["start_positions"],
-                outputs["end_predictions"] <= outputs["end_positions"],
-            )
-
-            in_bound_predictions = torch.bitwise_and(
-                in_bound_start_predictions,
-                in_bound_end_predictions,
+            in_bound_predictions_batch = torch.bitwise_and(
+                in_bound_start_predictions_batch,
+                in_bound_end_predictions_batch,
             )
 
-            prefix = outputs["dataset_identifier"]
+            total_val_samples += total_val_batch_samples
+            correct_start_predictions += torch.sum(correct_start_predictions_batch)
+            correct_end_predictions += torch.sum(correct_end_predictions_batch)
+            correct_predictions += torch.sum(correct_predictions_batch)
+            in_bound_start_predictions += torch.sum(in_bound_start_predictions_batch)
+            in_bound_end_predictions += torch.sum(in_bound_end_predictions_batch)
+            in_bound_predictions += torch.sum(in_bound_predictions_batch)
 
-            self.log(
-                f"{prefix}_correct_start_predictions",
-                torch.sum(correct_start_predictions) / predictions_len,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                f"{prefix}_correct_end_predictions",
-                torch.sum(correct_end_predictions) / predictions_len,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                f"{prefix}_correct_predictions",
-                correct_predictions,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                f"{prefix}_in_bound_start_predictions",
-                torch.sum(in_bound_start_predictions) / predictions_len,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                f"{prefix}_in_bound_end_predictions",
-                torch.sum(in_bound_end_predictions) / predictions_len,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                f"{prefix}_in_bound_predictions",
-                torch.sum(in_bound_predictions) / predictions_len,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            val_loss = torch.mean(outputs[f"{prefix}_val_loss"])
-            self.log(
-                f"{prefix}_val_loss",
-                val_loss,
-                logger=True,
-                batch_size=predictions_len,
-            )
-            self.log(
-                "val_loss",
-                val_loss,
-                logger=True,
-                prog_bar=True,
-                batch_size=predictions_len,
-            )
+        prefix = validation_step_outputs[-1]["dataset_identifier"]
 
-        return final_output
+        self.log(
+            f"{prefix}_correct_start_predictions",
+            correct_start_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
+        self.log(
+            f"{prefix}_correct_end_predictions",
+            correct_end_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
+        self.log(
+            f"{prefix}_correct_predictions",
+            correct_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
+        self.log(
+            f"{prefix}_in_bound_start_predictions",
+            in_bound_start_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
+        self.log(
+            f"{prefix}_in_bound_end_predictions",
+            in_bound_end_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
+        self.log(
+            f"{prefix}_in_bound_predictions",
+            in_bound_predictions / total_val_samples,
+            logger=True,
+            batch_size=total_val_samples,
+        )
 
     def configure_optimizers(self):
         no_decay = self.hparams.no_decay_params
