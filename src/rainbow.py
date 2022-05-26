@@ -3,6 +3,16 @@ from typing import Iterator
 from typing import Tuple
 
 
+ZERO_INDEX_LABEL_MAPPINGS = {
+    "anli": False,
+    "cosmosqa": True,
+    "hellaswag": True,
+    "physicaliqa": True,
+    "socialiqa": False,
+    "winogrande": True,
+}
+
+
 def rainbow_file_iter(fname: Path, end_token: str) -> Iterator[Tuple[str, int]]:
     """Iterates over the samples contained in fname rainbow formatted file."""
     with open(fname, encoding="UTF-8") as fdesc:
@@ -35,13 +45,3 @@ def rainbow_file_iter(fname: Path, end_token: str) -> Iterator[Tuple[str, int]]:
             else:
                 # line is not final, just append it
                 curr_line += line.rstrip()
-
-
-ZERO_INDEX_LABEL_MAPPINGS = {
-    "anli": False,
-    "cosmosqa": True,
-    "hellaswag": True,
-    "physicaliqa": True,
-    "socialiqa": False,
-    "winogrande": True,
-}
