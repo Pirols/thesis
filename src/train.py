@@ -118,13 +118,13 @@ def train(args: argparse.Namespace) -> None:
     if args.iterable_dataset:
         train_dataset = (
             DatasetAlternator(train_datasets, is_infinite=args.infinite_dataset)
-            if len(train_datasets) > 0
+            if len(train_datasets) > 1
             else train_datasets[0]
         )
     else:
         train_dataset = (
             ConcatDataset(train_datasets)
-            if len(train_datasets) > 0
+            if len(train_datasets) > 1
             else train_datasets[0]
         )
 
