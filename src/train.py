@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
         default="microsoft/deberta-v3-large",
     )
     parser.add_argument("--use_special_tokens", action="store_true", default=False)
-    parser.add_argument("--start_from_ckpt", type=str)
+    parser.add_argument("--start_from_ckpt", type=str, default="")
 
     parser.add_argument("--tokens_per_batch", type=int, default=700)
     parser.add_argument("--val_check_interval", type=float, default=1.0)
@@ -122,7 +122,11 @@ def train(args: argparse.Namespace) -> None:
             else train_datasets[0]
         )
     else:
-        train_dataset = ConcatDataset(train_datasets)
+        train_dataset = (
+            ConcatDataset(train_datasets)
+            if len(train_datasets) > 0
+            else train_datasets[0]
+        )
 
     train_dataloader = DataLoader(
         train_dataset,
