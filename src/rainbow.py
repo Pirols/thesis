@@ -9,7 +9,7 @@ ZERO_INDEX_LABEL_MAPPINGS = {
     "hellaswag": True,
     "physicaliqa": True,
     "socialiqa": False,
-    "winogrande": True,
+    "winogrande": False,
 }
 
 
