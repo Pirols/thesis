@@ -7,6 +7,7 @@ from typing import Union
 import pytorch_lightning as pl
 import torch
 from transformers import AutoModelForQuestionAnswering
+from transformers import get_constant_schedule_with_warmup
 from transformers import get_cosine_schedule_with_warmup
 from transformers import get_linear_schedule_with_warmup
 
@@ -17,6 +18,7 @@ from src.optimizers.rangerlars import RangerLars
 STR_TO_SCHEDULER = {
     "linear": get_linear_schedule_with_warmup,
     "cosine": get_cosine_schedule_with_warmup,
+    "constant": get_constant_schedule_with_warmup,
 }
 
 
@@ -246,19 +248,16 @@ class Module(pl.LightningModule):
                 optimizer_grouped_parameters,
                 lr=self.hparams.learning_rate,
             )
-            return optimizer
         elif self.hparams.optimizer == "ranger":
             optimizer = Ranger(
                 optimizer_grouped_parameters,
                 lr=self.hparams.learning_rate,
             )
-            return optimizer
         elif self.hparams.optimizer == "rangerlars":
             optimizer = RangerLars(
                 optimizer_grouped_parameters,
                 lr=self.hparams.learning_rate,
             )
-            return optimizer
         else:
             raise NotImplementedError
 
