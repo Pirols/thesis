@@ -149,3 +149,6 @@ Pipfile.lock
 
 # Pre-commit setup
 .pre-commit-config.yaml
+
+# Project specific
+experiments
