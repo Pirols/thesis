@@ -147,8 +147,10 @@ papers
 # Pipenv files
 Pipfile.lock
 
-# Pre-commit setup
-.pre-commit-config.yaml
-
 # Project specific
 experiments
+nltk_data
+
+.venv
+.envrc
+Pipfile*
