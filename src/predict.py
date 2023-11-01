@@ -1,38 +1,42 @@
 import argparse
+import os
 from pathlib import Path
 
-import torch
-from transformers import AutoModel
 from transformers import AutoTokenizer
 
+from src.pl_module import PLModule
 from src.rainbow import rainbow_file_iter
 from src.tokens import OPT_TOKENS
 
 
 def parse_args() -> argparse.Namespace:
-
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default="microsoft/deberta-v3-large")
-    parser.add_argument(
-        "--tokenizer_name",
-        type=str,
-        default="microsoft/deberta-v3-large",
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--use_fast", action="store_true", default=False)
+
+    parser.add_argument("--data_path", type=str, default="datasets/rainbow")
+    parser.add_argument("--dataset", type=str, default="physicaliqa")
+    parser.add_argument("--output", type=str, default="experiments/piqa_labels.txt")
+
+    args = parser.parse_args()
+
+    # Use pathlib.Path for paths
+    args.checkpoint = Path(args.checkpoint)
+    args.data_path = Path(args.data_path)
+    args.output_fpath = Path(args.output_fpath)
+
+    return args
+
+
+def predict(args: argparse.Namespace) -> None:
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.checkpoint.parent.parent / "tokenizer",
+        use_fast=args.use_fast,
+        add_prefix_space=True,
     )
 
-    parser.add_argument("--dataset_path", type=str, default="datasets/rainbow")
-    parser.add_argument("--dataset_id", type=str, default="physicaliqa")
-
-    parser.add_argument("--output_file", type=str, default="labels.txt")
-
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-
-    model = AutoModel.from_pretrained(args.model_name)
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name)
+    model = PLModule.load_from_checkpoint(args.checkpoint)
 
     tokenized_special_tokens = []
     for start_tok, end_tok in OPT_TOKENS[args.dataset_id]:
@@ -43,7 +47,7 @@ if __name__ == "__main__":
             ),
         )
 
-    with open(args.output_file, mode="w", encoding="utf-8") as fd_out:
+    with args.output_fpath.open(mode="w", encoding="utf-8") as fd_out:
         for line, _ in rainbow_file_iter(
             Path(args.dataset_path)
             / args.dataset_id
@@ -67,27 +71,34 @@ if __name__ == "__main__":
 
             outputs = model(
                 input_ids=input_ids,
+                attention_mask=inputs["attention_mask"],
                 return_dict=True,
             )
 
             start_logits = outputs.start_logits
             end_logits = outputs.end_logits
 
-            start_pred = torch.argmax(start_logits, dim=1)
-            end_pred = torch.argmax(end_logits, dim=1)
-
             try:
-                idx = line_start_end_indices.index((start_pred, end_pred))
+                idx = line_start_end_indices.index(
+                    (outputs["start_predictions"], outputs["end_predictions"]),
+                )
                 fd_out.write(idx)
             except ValueError:
                 # Running when start and end predictions belong to different sentence
-                curr_idx = 0
+                cur_idx = 0
                 cur_tot = -float("inf")
 
                 for i, (start, end) in enumerate(line_start_end_indices):
                     tot = start_logits[start] + end_logits[end]
                     if tot > cur_tot:
-                        curr_idx = i
+                        cur_idx = i
                     cur_tot = tot
 
-                fd_out.write(curr_idx)
+                fd_out.write(cur_idx)
+
+
+if __name__ == "__main__":
+    # https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-parallelism-true-false-warning
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    predict(parse_args())

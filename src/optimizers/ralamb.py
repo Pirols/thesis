@@ -6,7 +6,7 @@ from torch.optim.optimizer import Optimizer
 
 class Ralamb(Optimizer):
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+        defaults = {"lr": lr, "betas": betas, "eps": eps, "weight_decay": weight_decay}
         self.buffer = [[None, None, None] for ind in range(10)]
         super().__init__(params, defaults)
 
@@ -14,19 +14,18 @@ class Ralamb(Optimizer):
         super().__setstate__(state)
 
     def step(self, closure=None):
-
         loss = None
         if closure is not None:
             loss = closure()
 
         for group in self.param_groups:
-
             for p in group["params"]:
                 if p.grad is None:
                     continue
                 grad = p.grad.data.float()
                 if grad.is_sparse:
-                    raise RuntimeError("Ralamb does not support sparse gradients")
+                    msg = "Ralamb does not support sparse gradients"
+                    raise RuntimeError(msg)
 
                 p_data_fp32 = p.data.float()
 
@@ -53,24 +52,24 @@ class Ralamb(Optimizer):
                 buffered = self.buffer[int(state["step"] % 10)]
 
                 if state["step"] == buffered[0]:
-                    N_sma, radam_step_size = buffered[1], buffered[2]
+                    n_sma, radam_step_size = buffered[1], buffered[2]
                 else:
                     buffered[0] = state["step"]
                     beta2_t = beta2 ** state["step"]
-                    N_sma_max = 2 / (1 - beta2) - 1
-                    N_sma = N_sma_max - 2 * state["step"] * beta2_t / (1 - beta2_t)
-                    buffered[1] = N_sma
+                    n_sma_max = 2 / (1 - beta2) - 1
+                    n_sma = n_sma_max - 2 * state["step"] * beta2_t / (1 - beta2_t)
+                    buffered[1] = n_sma
 
                     # more conservative since it's an approximated value
-                    if N_sma >= 5:
+                    if n_sma >= 5:
                         radam_step_size = math.sqrt(
                             (1 - beta2_t)
-                            * (N_sma - 4)
-                            / (N_sma_max - 4)
-                            * (N_sma - 2)
-                            / N_sma
-                            * N_sma_max
-                            / (N_sma_max - 2),
+                            * (n_sma - 4)
+                            / (n_sma_max - 4)
+                            * (n_sma - 2)
+                            / n_sma
+                            * n_sma_max
+                            / (n_sma_max - 2),
                         ) / (1 - beta1 ** state["step"])
                     else:
                         radam_step_size = 1.0 / (1 - beta1 ** state["step"])
@@ -81,7 +80,7 @@ class Ralamb(Optimizer):
 
                 # more conservative since it's an approximated value
                 radam_step = p_data_fp32.clone()
-                if N_sma >= 5:
+                if n_sma >= 5:
                     denom = exp_avg_sq.sqrt().add_(group["eps"])
                     radam_step.addcdiv_(-radam_step_size * group["lr"], exp_avg, denom)
                 else:
@@ -98,7 +97,7 @@ class Ralamb(Optimizer):
                 state["adam_norm"] = radam_norm
                 state["trust_ratio"] = trust_ratio
 
-                if N_sma >= 5:
+                if n_sma >= 5:
                     p_data_fp32.addcdiv_(
                         -radam_step_size * group["lr"] * trust_ratio,
                         exp_avg,

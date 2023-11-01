@@ -14,10 +14,12 @@ class Lookahead(Optimizer):
     def __init__(self, base_optimizer, alpha=0.5, k=6):
         # NOTE super().__init__() not called on purpose
         if not 0.0 <= alpha <= 1.0:
-            raise ValueError(f"Invalid slow update rate: {alpha}")
-        if not 1 <= k:
-            raise ValueError(f"Invalid lookahead steps: {k}")
-        defaults = dict(lookahead_alpha=alpha, lookahead_k=k, lookahead_step=0)
+            msg = f"Invalid slow update rate: {alpha}"
+            raise ValueError(msg)
+        if not k >= 1:
+            msg = f"Invalid lookahead steps: {k}"
+            raise ValueError(msg)
+        defaults = {"lookahead_alpha": alpha, "lookahead_k": k, "lookahead_step": 0}
         self._base_optimizer = base_optimizer
         self.param_groups = base_optimizer.param_groups
         self.defaults = base_optimizer.defaults

@@ -1,19 +1,17 @@
-import os
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Union
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 import pytorch_lightning as pl
 import torch
-from transformers import AutoModelForQuestionAnswering
-from transformers import get_constant_schedule_with_warmup
-from transformers import get_cosine_schedule_with_warmup
-from transformers import get_linear_schedule_with_warmup
+from transformers import (
+    AutoModelForQuestionAnswering,
+    get_constant_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
+    get_linear_schedule_with_warmup,
+)
 
 from src.optimizers.ranger import Ranger
 from src.optimizers.rangerlars import RangerLars
-
 
 STR_TO_SCHEDULER = {
     "linear": get_linear_schedule_with_warmup,
@@ -22,15 +20,33 @@ STR_TO_SCHEDULER = {
 }
 
 
-class Module(pl.LightningModule):
-    def __init__(self, conf, *args, **kwargs):
+class PLModule(pl.LightningModule):
+    def __init__(
+        self,
+        checkpoint: Path,
+        tok_emb_dim: int,
+        mtl_loss_factor: float = 0.1,
+        learning_rate: float = 0.00001,
+        optimizer: str = "radam",
+        no_decay_params: Optional[list] = None,
+        weight_decay: float = 0.01,
+        scheduler: str = "linear",
+        num_training_steps: int = 300_000,
+        num_warmup_steps: int = 0,
+        *args,
+        **kwargs,
+    ):
+        if no_decay_params is None:
+            no_decay_params = ["bias", "LayerNorm.weight"]
         super().__init__(*args, **kwargs)
-        self.save_hyperparameters(vars(conf))  # self.hparams = conf
-        self.qa_model = AutoModelForQuestionAnswering.from_pretrained(
-            conf.transformer_model,
-        )
-        if getattr(self.hparams, "use_special_tokens", False):
-            self.qa_model.resize_token_embeddings(self.hparams.vocab_size)
+        self.save_hyperparameters()
+        self.qa_model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)
+        self.validation_step_outputs: list = []
+        if self.qa_model.get_input_embeddings().num_embeddings != tok_emb_dim:
+            self.qa_model.resize_token_embeddings(
+                tok_emb_dim,
+                pad_to_multiple_of=16,
+            )
 
     def forward(
         self,
@@ -40,8 +56,7 @@ class Module(pl.LightningModule):
         end_positions=None,
         *args,
         **kwargs,
-    ) -> Dict[str, torch.Tensor]:
-
+    ) -> Dict[str, Union[torch.Tensor, float]]:
         outputs = self.qa_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -67,16 +82,27 @@ class Module(pl.LightningModule):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> float:
         forward_output = self.forward(**batch)
+
         loss = forward_output["loss"]
-        self.log(
-            "train_loss",
-            loss,
-            # on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True,
-            batch_size=batch["input_ids"].size(0),
-        )
+        if batch["dataset_identifier"].startswith("mtl"):
+            loss *= self.hparams.mtl_loss_factor
+            self.log(
+                "train_loss_mtl",
+                loss,
+                on_epoch=True,
+                prog_bar=True,
+                logger=True,
+                batch_size=batch["input_ids"].size(0),
+            )
+        else:
+            self.log(
+                "train_loss",
+                loss,
+                on_epoch=True,
+                prog_bar=True,
+                logger=True,
+                batch_size=batch["input_ids"].size(0),
+            )
         return loss
 
     def validation_step(
@@ -85,7 +111,6 @@ class Module(pl.LightningModule):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> Dict[str, Any]:
-
         forward_output = self.forward(**batch)
         loss = forward_output["loss"]
 
@@ -106,7 +131,7 @@ class Module(pl.LightningModule):
             batch_size=batch["input_ids"].size(0),
         )
 
-        return {
+        out = {
             f'{batch["dataset_identifier"]}_val_loss': loss,
             "dataset_identifier": dataset_identifier,
             "start_predictions": forward_output["start_predictions"],
@@ -115,14 +140,11 @@ class Module(pl.LightningModule):
             "end_positions": batch["end_positions"],
         }
 
-    def validation_epoch_end(
-        self,
-        validation_step_outputs: Union[Dict[str, Any], List[Dict[str, Any]]],
-    ) -> Dict[str, Any]:
+        self.validation_step_outputs.append(out)
 
-        if not isinstance(validation_step_outputs, list):
-            validation_step_outputs = [validation_step_outputs]
+        return out
 
+    def on_validation_epoch_end(self) -> None:
         total_val_samples = 0
         correct_start_predictions = 0
         correct_end_predictions = 0
@@ -131,8 +153,7 @@ class Module(pl.LightningModule):
         in_bound_end_predictions = 0
         in_bound_predictions = 0
 
-        for val_batch_out in validation_step_outputs:
-
+        for val_batch_out in self.validation_step_outputs:
             total_val_batch_samples = val_batch_out["start_predictions"].size(0)
             correct_start_predictions_batch = torch.eq(
                 val_batch_out["start_predictions"],
@@ -167,7 +188,8 @@ class Module(pl.LightningModule):
             in_bound_end_predictions += torch.sum(in_bound_end_predictions_batch)
             in_bound_predictions += torch.sum(in_bound_predictions_batch)
 
-        prefix = validation_step_outputs[-1]["dataset_identifier"]
+        prefix = self.validation_step_outputs[-1]["dataset_identifier"]
+        self.validation_step_outputs.clear()
 
         self.log(
             f"{prefix}_correct_start_predictions",
@@ -263,16 +285,3 @@ class Module(pl.LightningModule):
         )
 
         return [optimizer], [{"interval": "step", "scheduler": lr_scheduler}]
-
-
-def get_module(args, tokenizer) -> Module:
-    module = Module(args)
-    if args.start_from_ckpt:
-        starting_module = Module.load_from_checkpoint(args.start_from_ckpt)
-        tmp_path = f'/tmp/{args.start_from_ckpt.split("/")[-1]}'
-        torch.save(starting_module.state_dict(), tmp_path)
-        module.load_state_dict(torch.load(tmp_path))
-        os.system(f"rm -rf {tmp_path}")
-    elif args.use_special_tokens:
-        module.qa_model.resize_token_embeddings(len(tokenizer))
-    return module

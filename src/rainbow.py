@@ -1,7 +1,5 @@
 from pathlib import Path
-from typing import Iterator
-from typing import Tuple
-
+from typing import Iterator, Tuple
 
 ZERO_INDEX_LABEL_MAPPINGS = {
     "anli": False,
@@ -15,7 +13,7 @@ ZERO_INDEX_LABEL_MAPPINGS = {
 
 def rainbow_file_iter(fname: Path, end_token: str) -> Iterator[Tuple[str, int]]:
     """Iterates over the samples contained in fname rainbow formatted file."""
-    with open(fname, encoding="UTF-8") as fdesc:
+    with fname.open(encoding="UTF-8") as fdesc:
         # discard first line
         fdesc.readline()
 

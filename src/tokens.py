@@ -28,6 +28,9 @@ OPT_TOKENS = {
         ("<option1>", "</option1>"),
         ("<option2>", "</option2>"),
     ],
+    "mtl_semcor": [
+        ("<g>", "</g>"),
+    ],
 }
 
 ALL_TOKENS = {
@@ -94,5 +97,11 @@ ALL_TOKENS = {
         OPT_TOKENS["winogrande"][0][1],
         OPT_TOKENS["winogrande"][1][0],
         OPT_TOKENS["winogrande"][1][1],
+    ],
+    "mtl_semcor": [
+        "<classify>",
+        "</classify>",
+        OPT_TOKENS["mtl_semcor"][0][0],
+        OPT_TOKENS["mtl_semcor"][0][1],
     ],
 }

@@ -144,13 +144,9 @@ datasets
 report
 papers
 
-# Pipenv files
-Pipfile.lock
-
 # Project specific
 experiments
 nltk_data
+wandb
 
-.venv
 .envrc
-Pipfile*
