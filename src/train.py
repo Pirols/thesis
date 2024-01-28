@@ -1,7 +1,6 @@
 import argparse
 import os
 from pathlib import Path
-from typing import List, Tuple
 
 import nltk
 from pytorch_lightning import Trainer, seed_everything
@@ -118,7 +117,7 @@ def get_tokenizer(args: argparse.Namespace) -> AutoTokenizer:
 def get_dataloaders(
     args: argparse.Namespace,
     tokenizer: AutoTokenizer,
-) -> Tuple[DataLoader, List[DataLoader]]:
+) -> tuple[DataLoader, list[DataLoader]]:
     rainbow_data_class = (
         RainbowExtractiveQAIterableDataset
         if args.iterable_dataset
